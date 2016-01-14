@@ -1,4 +1,4 @@
-#DMC TEAM KUAILE SERVER CODE
+#2016 SERVER CODE
 #Note: you must pre-process the Weibo dataset to add the CNY value to Users, to add lat and lng values to Checkins
 
 from flask import Flask
