@@ -1,228 +1,181 @@
-
+//TEAM KUAILE JAVASCRIPT
 
 var eventOutputContainer = document.getElementById("message");
 var eventSrc = new EventSource("/eventSource");
 
 eventSrc.onmessage = function(e) {
+	console.log(e);
 	eventOutputContainer.innerHTML = e.data;
 };
 
+// DON'T FORGET TO CHANGE THIS CODE DEPENDING ON THE DATA YOU'RE DISPLAYING IN YOUR TOOLTIP
 var tooltip = d3.select("div.tooltip");
-var tooltip_title = d3.select("#title");
 var tooltip_category = d3.select("#cat");
 
-
-var map = L.map('map').setView([22.539029, 114.062076], 16);
-
-var markerClicked = false;
-	
-
-//this is the OpenStreetMap tile implementation
-L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-	attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-}).addTo(map);
-
-//uncomment for Mapbox implementation, and supply your own access token
-
-// L.tileLayer('https://api.tiles.mapbox.com/v4/{mapid}/{z}/{x}/{y}.png?access_token={accessToken}', {
-// 	attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
-// 	mapid: 'mapbox.light',
-// 	accessToken: [INSERT YOUR TOKEN HERE!]
-// }).addTo(map);
-
-//create variables to store a reference to svg and g elements
-
-d3.select(map.getPanes().overlayPane).on("click", showLines);
-
-var svg = d3.select(map.getPanes().overlayPane).append("svg");
-var g_line = svg.append("g").attr("class", "leaflet-zoom-hide");
-var g = svg.append("g").attr("class", "leaflet-zoom-hide");
-
-function projectPoint(lat, lng) {
-	return map.latLngToLayerPoint(new L.LatLng(lat, lng));
-}
-
-function projectStream(lat, lng) {
-	var point = projectPoint(lat,lng);
-	this.stream.point(point.x, point.y);
-}
-
-var transform = d3.geo.transform({point: projectStream});
-var path = d3.geo.path().projection(transform);
+var map = L.map('map').setView([22.799606, 113.567950], 9);
 
 
-function remap(value, min1, max1, min2, max2){
-	return (min2) + ((value) - (min1)) * ((max2) - (min2)) / ((max1) - (min1));
-}
+		//this is the OpenStreetMap tile implementation
+		//L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+    		//attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+		//}).addTo(map);
+		//uncomment for Mapbox implementation, and supply your own access token
+		L.tileLayer('https://api.tiles.mapbox.com/v4/{mapid}/{z}/{x}/{y}.png?access_token={accessToken}', {
+		attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+		mapid: 'mapbox.dark',
+		accessToken: "pk.eyJ1IjoiYWszNzkzIiwiYSI6ImNpZjdmZ3V5eTBpOXpzaGx6a3hvbjVoemQifQ.Fflvuzl9_moN4a8H_k4m0w"
+		}).addTo(map);
 
-function updateData(){
 
-	var mapBounds = map.getBounds();
-	var lat1 = mapBounds["_southWest"]["lat"];
-	var lat2 = mapBounds["_northEast"]["lat"];
-	var lng1 = mapBounds["_southWest"]["lng"];
-	var lng2 = mapBounds["_northEast"]["lng"];
+		//create variables to store a reference to svg and g elements
+		var svg_overlay = d3.select(map.getPanes().overlayPane).append("svg");
+		var g_overlay = svg_overlay.append("g").attr("class", "leaflet-zoom-hide");
 
-	request = "/getData?lat1=" + lat1 + "&lat2=" + lat2 + "&lng1=" + lng1 + "&lng2=" + lng2
+		var svg = d3.select(map.getPanes().overlayPane).append("svg");
+		var g_line = svg.append("g").attr("class", "leaflet-zoom-hide");
+		var g = svg.append("g").attr("class", "leaflet-zoom-hide");
 
-	console.log(request);
 
-	g.selectAll("circle").remove()
-	g_line.selectAll("line").remove()
+		function projectPoint(lat, lng) {
+			return map.latLngToLayerPoint(new L.LatLng(lat, lng));
+		}
 
-  	d3.json(request, function(data) {
+		function projectStream(lat, lng) {
+			var point = projectPoint(lat,lng);
+			this.stream.point(point.x, point.y);
+		}
 
-		//create placeholder circle geometry and bind it to data
-		var circles = g.selectAll("circle").data(data.features);
+		var transform = d3.geo.transform({point: projectStream});
+		var path = d3.geo.path().projection(transform);
 
-		circles.enter()
-			.append("circle")
-			.on("mouseover", function(d){
-				tooltip.style("visibility", "visible");
-				tooltip_title.text(d.properties.name);
-				tooltip_category.text("Category: " + d.properties.cat);
+		var toLine = d3.svg.line()
+			.interpolate("linear")
+			.x(function(d) {
+				return applyLatLngToLayer(d) .x
 			})
-			.on("mousemove", function(){
-				tooltip.style("top", (d3.event.pageY-10)+"px")
-				tooltip.style("left",(d3.event.pageX+10)+"px");
-			})
-			.on("mouseout", function(){
-				tooltip.style("visibility", "hidden");
-			})
-			.on("click", function(d){
-				hideLines(d.id);
-			})
-			.attr("r", 7)
-		;
+			.y(function(d) {
+				return applyLatLngToLayer(d) .y
+			});
 
-		var lines = g_line.selectAll("line").data(data.lines);
-		lines.enter().append("line")
+		function applyLatLngToLayer(d) {
+			var y = d.geometry.coordinates[1]
+			var x = d.geometry.coordinates[0]
+			return map.latLngToLayerPoint(new L.LatLng(y, x))
+		}
 
-		// call function to update geometry
-		update();
-		map.on("viewreset", update);
+		var slidervalue = document.getElementById("slider").value;;
 
-		// function to update the data
-		function update() {
+		function sliderConvert(dayscore) {
+				dayscore = JSON.parse(dayscore)
 
-			// get bounding box of data
-		    var bounds = path.bounds(data),
-		        topLeft = bounds[0],
-		        bottomRight = bounds[1];
+				if (dayscore == document.getElementById("slider").value){
+					return 1;}
+				else{
+				return .1;
+				}
+			}
 
-		    var buffer = 50;
+		function updateData(){
 
-		    // reposition the SVG to cover the features.
-		    svg .attr("width", bottomRight[0] - topLeft[0] + (buffer * 2))
-		        .attr("height", bottomRight[1] - topLeft[1] + (buffer * 2))
-		        .style("left", (topLeft[0] - buffer) + "px")
-		        .style("top", (topLeft[1] - buffer) + "px");
+			alert("Running");
 
-		    g   .attr("transform", "translate(" + (-topLeft[0] + buffer) + "," + (-topLeft[1] + buffer) + ")");
-		    g_line.attr("transform", "translate(" + (-topLeft[0] + buffer) + "," + (-topLeft[1] + buffer) + ")");
+			//var mapBounds = map.getBounds();
+			//var lat1 = mapBounds["_southWest"]["lat"];
+			//var lat2 = mapBounds["_northEast"]["lat"];
+			//var lng1 = mapBounds["_southWest"]["lng"];
+			//var lng2 = mapBounds["_northEast"]["lng"];
 
-		    // update circle position and size
-		    circles
-		    	.attr("cx", function(d) { return projectPoint(d.geometry.coordinates[0], d.geometry.coordinates[1]).x; })
-		    	.attr("cy", function(d) { return projectPoint(d.geometry.coordinates[0], d.geometry.coordinates[1]).y; })
-    		;
+			// CAPTURE USER INPUT FOR CELL SIZE FROM HTML ELEMENTS
+			//var cell_size = 25;
+			//var w = window.innerWidth;
+			//var h = window.innerHeight;
 
-			lines
-				.attr("x1", function(d) { return projectPoint(d.coordinates[0], d.coordinates[1]).x; })
-				.attr("y1", function(d) { return projectPoint(d.coordinates[0], d.coordinates[1]).y; })
-				.attr("x2", function(d) { return projectPoint(d.coordinates[2], d.coordinates[3]).x; })
-				.attr("y2", function(d) { return projectPoint(d.coordinates[2], d.coordinates[3]).y; })
-			;
-		};
+			// SEND USER CHOICES FOR ANALYSIS TYPE, CELL SIZE, HEAT MAP SPREAD, ETC. TO SERVER
+			request = "/getData"
+			//lat1=" + lat1 + "&lat2=" + lat2 + "&lng1=" + lng1 + "&lng2=" + lng2
+			//request2 = "/getData2?lat1=" + lat1 + "&lat2=" + lat2 + "&lng1=" + lng1 + "&lng2=" + lng2
 
-		function hideLines(id) {
+			console.log(request);
 
-			markerClicked = true;
+			g.selectAll("circle").remove()
+			g_line.selectAll("line").remove()
 
-			var others = [id];
+		  	d3.json(request, function(data) {
 
-			lines.transition()
-				.style("stroke-opacity", .5)
-				.style("stroke-width", function(d) { 
-					if (d.from == id ){
-						others.push(d.to);
-						return 3;
-					};
-					if(d.to == id ){
-						others.push(d.from);
-						return 3;
-					}; 
-				})
-				.style("visibility", function(d) { 
-					if (d.from == id || d.to == id){
-						return "visible";
-					}else{
-						return "hidden";
-					}; 
-				})
-			;
+				//create placeholder circle geometry and bind it to data
+				var circles = g.selectAll("circle").data(data.features);
 
-			var minVal = 1000000000;
-			var maxVal = 0;
+					circles.enter()
+						.append("circle")
+						.on("mouseover", function(d){
+							tooltip.style("visibility", "visible");
+							tooltip_category.text("Category: " + d.properties.type);
+						})
+						.on("mousemove", function(){
+							tooltip.style("top", (d3.event.pageY-10)+"px")
+							tooltip.style("left",(d3.event.pageX+10)+"px");
+						})
+						.on("mouseout", function(){
+							tooltip.style("visibility", "hidden");
+						})
+						.attr("r",7)
+						.attr("fill-opacity", .1)
+						.style("fill", "white");
 
-			circles
-				.style("visibility", function(d) { 
+				var lines = g_line.selectAll("line").data(data.polylines);
+						lines.enter().append("line")
 
-					var val = d.properties.score;
+						update();
+						map.on("viewreset", update);
 
-					for (var i = 0; i < others.length; i++){
-						if (d.id == others[i]){
-							if (val > maxVal){
-								maxVal = val;
-							}								
-							if (val < minVal){
-								minVal = val;
-							}
+				function update() {
+					// get bounding box of data
+				    var bounds = path.bounds(data),
+				        topLeft = bounds[0],
+				        bottomRight = bounds[1];
+				    var buffer = 50;
+				    // reposition the SVG to cover the features.
+				    svg .attr("width", bottomRight[0] - topLeft[0] + (buffer * 2))
+				        .attr("height", bottomRight[1] - topLeft[1] + (buffer * 2))
+				        .style("left", (topLeft[0] - buffer) + "px")
+				        .style("top", (topLeft[1] - buffer) + "px");
 
-							return "visible";
-						}
-					}
-					return "hidden";
-				})
-			;
+				    g   .attr("transform", "translate(" + (-topLeft[0] + buffer) + "," + (-topLeft[1] + buffer) + ")");
+						g_line.attr("transform", "translate(" + (-topLeft[0] + buffer) + "," + (-topLeft[1] + buffer) + ")");
 
-			circles.transition()
-				.attr("r", function(d) { 
-					for (var i = 0; i < others.length; i++){
-						if (d.id == others[i]){
-							return remap(d.properties.score, minVal, maxVal, 10, 30);
-						}
-					}
-					return 7;
-				})
-			;
-		};
-	});
+				    // update circle position and size
+				    circles
+				    	.attr("cx", function(d) { return projectPoint(d.geometry.coordinates[0], d.geometry.coordinates[1]).x; })
+				    	.attr("cy", function(d) { return projectPoint(d.geometry.coordinates	[0], d.geometry.coordinates[1]).y; })
+							;
 
-};
+							lines
+								.attr("d", toLine)
+				};
 
 
 
+					update()
+					changeSlider();})
 
-function showLines() {
 
-	if (markerClicked == true){
-		markerClicked = false
-		return
-	}
+				}
 
-	g_line.selectAll("line")
-		.transition()
-		.style("stroke-opacity", .2)
-		.style("stroke-width", 1)
-		.style("visibility", "visible")
+				function changeSlider(){
+					console.log(document.getElementById("slider").value)
+
+					g.selectAll("circle")
+						.attr("r",7)
+						.attr("fill-opacity", .1)
+						.style("fill", "white")
+						.filter( function (d) {return(d.properties.time == document.getElementById("slider").value)})
+							.attr("fill-opacity", 1)
+							.style("fill", "#FFB218")
+							.attr("r", 10)
+				};
+// call function to update geometry
+
+
 	;
-
-	g.selectAll("circle")
-		.transition()
-		.attr("r", 7)
-		.style("visibility", "visible")
-	;
-};
-
-updateData();
+;
+		updateData();
