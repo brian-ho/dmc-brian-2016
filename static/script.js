@@ -1,4 +1,4 @@
-//TEAM KUAILE JAVASCRIPT
+//2016 JAVASCRIPT
 
 var eventOutputContainer = document.getElementById("message");
 var eventSrc = new EventSource("/eventSource");
