@@ -1,3 +1,6 @@
+#DMC TEAM KUAILE SERVER CODE
+#Note: you must pre-process the Weibo dataset to add the CNY value to Users, to add lat and lng values to Checkins
+
 from flask import Flask
 from flask import render_template
 from flask import request
@@ -8,6 +11,7 @@ import time
 import sys
 import random
 import math
+import datetime
 
 import pyorient
 
@@ -22,8 +26,28 @@ app = Flask(__name__)
 
 q = Queue()
 
+def point_distance(x1, y1, x2, y2):
+	return ((x1-x2)**2.0 + (y1-y2)**2.0)**(0.5)
+
 def remap(value, min1, max1, min2, max2):
 	return float(min2) + (float(value) - float(min1)) * (float(max2) - float(min2)) / (float(max1) - float(min1))
+
+#daymaker makes your day
+def daymaker(time):
+	temp = str(time)
+	tempYear = str(temp[0:4])
+	tempMonth = str(temp[5:7])
+	tempDay = str(temp[8:10])
+	dayscore = 0
+
+	tempDate = datetime.date(int(tempYear), int(tempMonth), int(tempDay))
+
+	if datetime.date(2014, 1, 15) <= tempDate <= datetime.date(2014,02, 12):
+		dayscore = tempDate - datetime.date(2014, 1, 15)
+	else:
+		dayscore = 0
+
+	return dayscore.days
 
 def event_stream():
     while True:
@@ -50,82 +74,98 @@ def getData():
 	lat2 = str(request.args.get('lat2'))
 	lng2 = str(request.args.get('lng2'))
 
-	print "received coordinates: [" + lat1 + ", " + lat2 + "], [" + lng1 + ", " + lng2 + "]"
-	
+	#print "received coordinates: [" + lat1 + ", " + lat2 + "], [" + lng1 + ", " + lng2 + "]"
+
+	#CAPTURE ANY ADDITIONAL ARGUMENTS SENT FROM THE CLIENT HERE
+
 	client = pyorient.OrientDB("localhost", 2424)
 	session_id = client.connect("root", "password")
 	db_name = "weibo"
 	db_username = "admin"
 	db_password = "admin"
 
-	if client.db_exists( db_name, pyorient.STORAGE_TYPE_MEMORY ):
+        if client.db_exists( db_name, pyorient.STORAGE_TYPE_MEMORY ):
 		client.db_open( db_name, db_username, db_password )
 		print db_name + " opened successfully"
 	else:
 		print "database [" + db_name + "] does not exist! session ending..."
 		sys.exit()
 
-	query = 'SELECT FROM Place WHERE lat BETWEEN {} AND {} AND lng BETWEEN {} AND {} AND cat_2 = "Food/Drinks"'
+	#FIRST QUERY TO DATABASE, FILTERING USERS AND LIMITING
+	query = 'SELECT * FROM USER WHERE CNY = 7 limit 2'
 
-	records = client.command(query.format(lat1, lat2, lng1, lng2))
+
+	records = client.command(query)
+	print "* * * * * NEW RUN STARTING * * * * *"
 
 	numListings = len(records)
-	print 'received ' + str(numListings) + ' records'
+	print 'received ' + str(numListings) + ' users'
 
-	placesDict = {}
-	scoreDict = {}
+	output = {"type":"FeatureCollection","features":[], "polylines":[]}
 
-	for place in records:
-		placesDict[place._rid] = {'lat': place.lat, 'lng': place.lng}
-		scoreDict[place._rid] = 0
+	userDict = {}
 
-	for i, rid in enumerate(placesDict.keys()):
+	for user in records:
+			userDict[user.uid] = {}
 
-		q.put('processing ' + str(i) + ' out of ' + str(numListings) + ' places...')
+	for i, uid in enumerate(userDict.keys()):
 
-		s = "SELECT * FROM (TRAVERSE in(Checkin) FROM {}) WHERE @class = 'User'"
+			print 'looking at user number ' + str(i+1) + ' with UID: ' + str(uid)
+			count = 0
+			q.put('processing ' + str(i+1) + ' out of ' + str(numListings) + ' users...')
 
-		people = client.command(s.format(rid))
-		uids = [person.uid for person in people]
+			#SECOND QUERY TO DATABASE, GETTING CHECKINS FOR USERS MATCHING CNY CRITERIA
+			s = "SELECT expand(out_Checkin) FROM User WHERE uid = {}"
 
-		placesDict[rid]['users'] = set(uids)
+			checkins = client.command(s.format(uid))
 
-	q.put('matching records...')
+			polyline = {"geometry":[]}
 
-	lines = []
+			numCheckins = len(checkins)
+			cids = [checkin.cid for checkin in checkins]
+			print 'user number ' + str(i+1) + ' has ' + str(numCheckins) + ' total checkins'
 
-	for place1 in placesDict.keys():
-		users1 = placesDict[place1]['users']
-		lat1 = placesDict[place1]['lat']
-		lng1 = placesDict[place1]['lng']
-		placesDict.pop(place1)
-		for place2 in placesDict.keys():
-			if len(users1 & placesDict[place2]['users']) > 1:
-				scoreDict[place1] += 1
-				scoreDict[place2] += 1
-				lines.append({'from': place1, 'to': place2, 'coordinates': [lat1, lng1, placesDict[place2]['lat'], placesDict[place2]['lng']]})
+			userDict[uid]['checkins'] = set(cids)
 
+			#THIRD AND FINAL QUERY TO DATABASE, FILTER CHECKINS
+			for cid in userDict[uid]['checkins']:
+
+				t = "SELECT lat, lng, time, cat_1 FROM CHECKIN WHERE cid = {} AND time BETWEEN '2014-01-21 00:01:00' AND '2014-02-13 00:00:00'"
+				#Note that query is not limited geographically: performance varied with number of users found.
+				#AND lat BETWEEN {} AND {} AND lng BETWEEN {} AND {}"
+
+				CNYcheckins = client.command(t.format(cid, lat1, lat2, lng1, lng2))
+				testBool = len(CNYcheckins)
+
+				print 'querying ' + str(cid) + ' for user ' + str(uid)
+
+				if len(CNYcheckins)!=0:
+
+					print 'great success!'
+					count +=1
+					print 'user number ' + str(i+1) + ' has ' + str(count) + ' CNYcheckins'
+
+					for j, CNYcheckin in enumerate(CNYcheckins):
+
+						q.put(str(j) + ' out of ' + str(numCheckins) + ' valid ...')
+
+						feature = {"type":"Feature","properties":{},"geometry":{"type":"Point"}}
+						feature ["user"] = uid
+						feature ["properties"]["time"] = daymaker(CNYcheckin.time)
+						feature ["properties"]["type"] = CNYcheckin.cat_1
+						feature ["geometry"]["coordinates"] = [CNYcheckin.lat, CNYcheckin.lng]
+						print 'dayscore is ' + str(feature["properties"]["time"])
+
+						output["features"].append(feature)
+						polyline["geometry"].append({'coordinates': [CNYcheckin.lat, CNYcheckin.lng]})
+						#print str(polylines)
+			output["polylines"].append(polyline)
+
+			q.put('idle')
+
+	print str(output)
 	client.db_close()
 
-
-	output = {"type":"FeatureCollection","features":[]}
-
-	for record in records:
-		if scoreDict[record._rid] < 1:
-			continue
-		feature = {"type":"Feature","properties":{},"geometry":{"type":"Point"}}
-		feature["id"] = record._rid
-		feature["properties"]["name"] = record.title
-		feature["properties"]["cat"] = record.cat_1
-		feature["properties"]["score"] = scoreDict[record._rid]
-		feature["geometry"]["coordinates"] = [record.lat, record.lng]
-
-		output["features"].append(feature)
-
-
-	output["lines"] = lines
-
-	q.put('idle')
 	return json.dumps(output)
 
 
