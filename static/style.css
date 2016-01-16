@@ -1,72 +1,62 @@
 body {
-	padding: 0;
-	margin: 0;
-	text-align: center ;
-	font-family: 'Roboto Condensed', sans-serif;
-	font-size: 14px;
-	line-height: 5px;
+padding: 0;
+margin: 0;
+text-align: center ;
+font-family: 'Roboto Condensed', sans-serif;
+font-size: 14px;
+line-height: 5px;
 }
-
 h4{
-	font-family: 'Roboto Condensed', sans-serif;
-	text-transform: uppercase;
-	font-weight: 700;
+font-family: 'Roboto Condensed', sans-serif;
+text-transform: uppercase;
+font-weight: 700;
 }
-
 html, body, #map {
-	height: 100%;
+height: 100%;
 }
-
 circle {
-	stroke-width: 0px;
-	transition: shape-outside 1s;
-	shape-outside: circle(30%);
+stroke-width: 1px;
+transition: shape-outside 1s;
+shape-outside: circle(30%);
+stroke-opacity: 1;
 }
 circle:hover {
-	stroke: white;
-	stroke-width: 2px;
-	cursor: pointer;
-	shape-outside: circle(50%);
+stroke: white;
+stroke-width: 2px;
+cursor: pointer;
+shape-outside: circle(50%);
 }
-
-.lineConnect {
-		stroke: white;
-		stroke-width: 10 px;
-		opacity: 1;
-}
-
 path {
-		stroke: white;
-		stroke-width: 10 px;
+stroke: white;
+stroke-width: 1px;
+fill-opacity: 0;
+opacity: .5;
 }
-
 div.tooltip{
-	padding: 6px;
-	background: white;
-	visibility: hidden;
-	position: absolute;
-	z-index: 10;
+padding: 6px;
+background: white;
+visibility: hidden;
+position: absolute;
+z-index: 10;
 }
 p.tooltip-text{
-	margin: 0px;
-	padding: 0px;
-	font-family: 'Roboto Condensed', sans-serif;
-	text-transform: uppercase;
+margin: 0px;
+padding: 0px;
+font-family: 'Roboto Condensed', sans-serif;
+text-transform: uppercase;
 }
-
 div.menu{
-	position: fixed;
-	margin-top: 0px;
-	margin-left: 0px ;
-	padding: 10px;
-	top: 5px;
-	right: 0px;
-	width: 1450px;
-	height: 150px;
-	background: rgba(255,255,255,.8);
+position: fixed;
+margin-top: 0px;
+margin-left: 0px ;
+padding: 10px;
+top: 5px;
+right: 0px;
+width: 1450px;
+height: 150px;
+background: rgba(255,255,255,.8);
 }
-
 em{
-  color: red;
-  font-weight: 300;
+color: red;
+font-weight: 300;
 }
