@@ -29,12 +29,13 @@ circle:hover {
 	shape-outside: circle(50%);
 }
 
-.line {
+.lineConnect {
 		stroke: white;
 		stroke-width: 10 px;
+		opacity: 1;
 }
 
-line {
+path {
 		stroke: white;
 		stroke-width: 10 px;
 }
