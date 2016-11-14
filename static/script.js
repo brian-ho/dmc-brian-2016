@@ -22,19 +22,20 @@ var map = L.map('map').setView([22.799606, 113.567950], 9);
 
     var svg = d3.select(map.getPanes().overlayPane).append("svg");
     var g_line = svg.append("g").attr("class", "leaflet-zoom-hide");
+    var g_lineStatic = svg.append("g").attr("class", "leaflet-zoom-hide");
     var g = svg.append("g").attr("class", "leaflet-zoom-hide");
 
 
     function projectPoint(x, y) {
-  	return map.latLngToLayerPoint(new L.LatLng(y, x));
+    return map.latLngToLayerPoint(new L.LatLng(y, x));
     }
 
     function projectStream(x, y) {
-  	   var point = projectPoint(x, y);
-  	    this.stream.point(point.x, point.y);
+       var point = projectPoint(x, y);
+       this.stream.point(point.x, point.y);
     }
 
-    var transform = d3.geo.transform({point: projectStream}),
+    var transform = d3.geo.transform({point: projectStream});
         path = d3.geo.path().projection(transform);
 
     var slidervalue = document.getElementById("slider").value;
@@ -77,12 +78,16 @@ var map = L.map('map').setView([22.799606, 113.567950], 9);
               tooltip.style("visibility", "hidden");
             })
             .attr("r",7)
-            .attr("fill-opacity", .3)
+            .attr("fill-opacity", 0.3)
+            .attr("stroke-opacity", 1)
             .style("fill", "white");
 
         var lines = g_line.selectAll("path").data(pathData);
             lines.enter().append("path")
-
+            .attr("opacity", 1)
+        var linesStatic = g_lineStatic.selectAll("path").data(pathData);
+            linesStatic.enter().append("path")
+            .attr("opacity", 0.3)
 
             map.on("viewreset", update);
             update();
@@ -102,6 +107,7 @@ var map = L.map('map').setView([22.799606, 113.567950], 9);
 
             g   .attr("transform", "translate(" + (-topLeft[0] + buffer) + "," + (-topLeft[1] + buffer) + ")");
             g_line.attr("transform", "translate(" + (-topLeft[0] + buffer) + "," + (-topLeft[1] + buffer) + ")");
+            g_lineStatic.attr("transform", "translate(" + (-topLeft[0] + buffer) + "," + (-topLeft[1] + buffer) + ")");
 
             // update circle position and size
             circles
@@ -110,6 +116,8 @@ var map = L.map('map').setView([22.799606, 113.567950], 9);
               ;
 
             lines
+              .attr("d", path)
+            linesStatic
               .attr("d", path)
         };
         console.log(lines)
@@ -167,7 +175,8 @@ var map = L.map('map').setView([22.799606, 113.567950], 9);
 
           g.selectAll("circle")
             .attr("r",7)
-            .attr("fill-opacity", .3)
+            .attr("fill-opacity", 0)
+            .attr("stroke-opacity", 1)
             .style("fill", "white")
             .filter( function (d) {return(d.properties.time == document.getElementById("slider").value)})
               .attr("fill-opacity", 1)

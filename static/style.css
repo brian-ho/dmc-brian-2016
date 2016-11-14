@@ -15,22 +15,18 @@ html, body, #map {
 height: 100%;
 }
 circle {
+stroke: white;
 stroke-width: 1px;
-transition: shape-outside 1s;
-shape-outside: circle(30%);
-stroke-opacity: 1;
 }
 circle:hover {
 stroke: white;
 stroke-width: 2px;
 cursor: pointer;
-shape-outside: circle(50%);
 }
 path {
 stroke: white;
 stroke-width: 1px;
 fill-opacity: 0;
-opacity: .5;
 }
 div.tooltip{
 padding: 6px;
